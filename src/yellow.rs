@@ -47,7 +47,7 @@ pub fn absolute(n: isize) -> usize {
 pub fn distance(from_pos_x: usize, from_pos_y: usize, to_pos_x: usize, to_pos_y: usize) -> usize {
     // let calculate_distance: 
     // let distance_vertical: usize = absolute(from_pos_x, to_pos_x);
-
+    0
 }
 
 // Returns the position that's adjacent to the left of the given one, in the form (x, y)
