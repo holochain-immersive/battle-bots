@@ -1,7 +1,5 @@
 use battle_bots_engine::*;
 
-use crate::grey::adjacent_position_in_direction;
-
 
 /**
  * Instructions
@@ -462,4 +460,14 @@ fn next_move_towards_resource(game_state: &GameState, bot_position: &Position) -
     }
 
     None
+}
+// Returns the position that's adjacent to the given one in the given direction, in the form (x, y)
+// eg. adjacent_position_in_direction(4, 5, Direction::Down) == (4, 6)
+pub fn adjacent_position_in_direction(x: usize, y: usize, direction: Direction) -> (usize, usize) {
+    match direction {
+        Direction::Down => (x, (y as isize - 1) as usize),
+        Direction::Up => (x, y + 1),
+        Direction::Left => ((x as isize - 1) as usize, y),
+        Direction::Right => (x + 1, y),
+    }
 }
