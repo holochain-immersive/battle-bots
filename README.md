@@ -64,6 +64,10 @@ Go in `src/main.rs`, and follow the instructions from top to bottom:
 
 ## Running a battle
 
+Make sure you have rust installed.
+
+If you are running Ubuntu, make sure you have x11 installed: `sudo apt-get install libx11-dev`
+
 ```bash
 cargo run
 ```
