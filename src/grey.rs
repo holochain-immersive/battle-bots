@@ -36,3 +36,39 @@ pub fn shortest_rotation(from: &Direction, to: &Direction) -> Rotation {
 pub fn rotate_direction(direction: &Direction, rotation: &Rotation) -> Direction {
     Direction::Down
 }
+
+
+
+
+
+// ADD UNIT TESTS
+#[cfg(test)]
+mod tests {
+    use crate::yellow::*;
+
+    #[test]
+    fn adjacent_position_in_direction_test() {
+        assert_eq!(true, false);
+    }
+
+    #[test]
+    fn is_bot_test() {
+        assert_eq!(true, false);
+    }
+    
+    #[test]
+    fn shortest_rotation_test() {
+        assert_eq!(true, false);
+    }
+    
+    #[test]
+    fn rotate_direction_test() {
+        assert_eq!(true, false);
+    }
+
+    // #[test]
+    // #[should_panic]
+    // fn shouldPanic_test() {
+    //     // code that panics goes here
+    // }
+}
