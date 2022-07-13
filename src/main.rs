@@ -5,6 +5,7 @@ mod blue;
 mod grey;
 mod red;
 mod yellow;
+mod magenta;
 
 fn main() {
     Battle::new(vec![
@@ -57,6 +58,11 @@ fn main() {
                     red::get_closest_enemy,
                 )
             },
+        },
+        ColorConfig {
+            color: Color::Magenta,
+            number_of_bots: 3,
+            strategy: |state, position| magenta::magenta(state, position),
         },
     ])
     .run()
