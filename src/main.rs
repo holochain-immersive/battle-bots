@@ -1,11 +1,13 @@
 #![allow(unused_variables)]
+use almost_green::almost_green;
 use battle_bots_engine::*;
 
+mod almost_green;
 mod blue;
 mod grey;
+mod magenta;
 mod red;
 mod yellow;
-mod magenta;
 
 fn main() {
     Battle::new(vec![
@@ -63,6 +65,11 @@ fn main() {
             color: Color::Magenta,
             number_of_bots: 3,
             strategy: |state, position| magenta::magenta(state, position),
+        },
+        ColorConfig {
+            color: Color::Xterm(42),
+            number_of_bots: 3,
+            strategy: |state, position| almost_green(state, position),
         },
     ])
     .run()
