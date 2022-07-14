@@ -53,12 +53,70 @@ enum Intent {
 struct Target {
     pos: Position,
     weight: f32,
+    path: Vec<Position>,
 }
 
 fn distance(p1: &Position, p2: &Position) -> f32 {
     let distance_x = (p2.x as isize - p1.x as isize).abs();
     let distance_y = (p2.y as isize - p1.y as isize).abs();
     ((distance_x * distance_x + distance_y * distance_y) as f32).sqrt()
+}
+
+// Return a vector of the adjacent positions to the given one, in the form of (x, y) tuples
+// Careful! Don't return invalid positions (negative coordinates, or coordinates that exceed the map size)
+fn valid_adjacent_positions(game_state: &GameState, position: &Position) -> Vec<Position> {
+    let mut positions = vec![];
+
+    if position.x > 0 {
+        positions.push((position.x - 1, position.y));
+    }
+    positions.push((position.x + 1, position.y));
+    if position.y > 0 {
+        positions.push((position.x, position.y - 1));
+    }
+    positions.push((position.x + 1, position.y + 1));
+
+    positions
+        .into_iter()
+        .filter(|(x, y)| *x < game_state.map_width && *y < game_state.map_height)
+        .filter(|(x, y)| {
+            game_state
+                .bots
+                .iter()
+                .all(|(bot_pos, _)| bot_pos.x != *x || bot_pos.y != *y)
+        })
+        .map(|(x, y)| Position { x, y })
+        .collect()
+
+    // filter_valid_positions(positions, game_state.map_width, game_state.map_height)
+}
+
+fn find_path(game_state: &GameState, from: &Position, to: &Position) -> Vec<Position> {
+    let mut visited = vec![vec![false; game_state.map_width]; game_state.map_width];
+    let mut queue: Vec<(Position, Vec<Position>)> = vec![];
+
+    visited[from.x][from.y] = true;
+    queue.push((from.clone(), vec![]));
+
+    while !queue.is_empty() {
+        let (current_pos, mut path) = queue.remove(0);
+        if current_pos.x == to.x && current_pos.y == to.y {
+            path.push(current_pos);
+            path.remove(0);
+            return path;
+        }
+
+        for possible_pos in valid_adjacent_positions(game_state, &current_pos) {
+            if !visited[possible_pos.x][possible_pos.y] {
+                visited[possible_pos.x][possible_pos.y] = true;
+                let mut new_path = path.clone();
+                new_path.push(current_pos.clone());
+                queue.push((possible_pos, new_path));
+            }
+        }
+    }
+
+    Vec::new()
 }
 
 // balance distance vs energy in the buff
@@ -83,14 +141,22 @@ fn find_buffs(game_state: &GameState, bot_position: &Position) -> Vec<Target> {
         .map(|(pos, resource)| Target {
             pos: pos.clone(),
             weight: calc_buff_weight(pos, resource, bot_position),
+            path: find_path(game_state, bot_position, pos),
         })
         .collect()
 }
 
+// fn path_adj_weight(weight: f32, path: &Vec<Position>) -> f32 {
+//     weight * path.len()
+
+// }
+
 fn best_buff(game_state: &GameState, bot_position: &Position) -> Option<Target> {
+    // buffs.sort_by(|a, b| a.path.len().partial_cmp(&b.path.len()).unwrap());
     find_buffs(game_state, bot_position)
         .into_iter()
         .reduce(|accum_target, target| {
+            // path_adj_weight(target.weight)
             if target.weight > accum_target.weight {
                 target
             } else {
@@ -101,7 +167,7 @@ fn best_buff(game_state: &GameState, bot_position: &Position) -> Option<Target> 
 
 // balance distance vs energy in the buff
 fn calc_enemy_weight(enemy_pos: &Position, enemy_bot: &Bot, bot_position: &Position) -> f32 {
-    let max_dist = 27.0;
+    let max_dist = 32.0;
     let dist = distance(enemy_pos, bot_position);
 
     // energy weight: attack weaker enemies
@@ -112,9 +178,9 @@ fn calc_enemy_weight(enemy_pos: &Position, enemy_bot: &Bot, bot_position: &Posit
     };
 
     let dist_weight = if dist >= max_dist {
-        0.01
+        0.1
     } else {
-        (dist as f32 * -1.0 + max_dist) / max_dist
+        (dist as f32 * -1.0 + max_dist) / (max_dist - 3.0)
     };
     // log::info!("enemy nrg {:?} : dist {:?} {:?}", energy_weight, dist, dist_weight);
 
@@ -129,6 +195,7 @@ fn find_enemies(game_state: &GameState, bot_position: &Position) -> Vec<Target> 
         .map(|(pos, bot)| Target {
             pos: pos.clone(),
             weight: calc_enemy_weight(pos, bot, bot_position),
+            path: vec![],
         })
         .collect()
 }
@@ -267,14 +334,15 @@ pub fn green(game_state: &GameState, bot_position: Position) -> Actuators {
     // CHOOSE STRATEGY
     let intent = match &closest_enemy {
         Some(closest_enemy) => {
-            if me.energy > 6 && distance(&bot_position, &closest_enemy) > 5.0 {
+            if me.energy > 7 && distance(&bot_position, &closest_enemy) > 11.0 {
                 Intent::Chill
-            } else if me.energy <= 3 {
+            } else if me.energy <= 8 {
                 Intent::BuffUp
-            } else if enemy_target.as_ref().unwrap().weight > 0.83 {
+            } else if enemy_target.as_ref().unwrap().weight > 0.8 {
                 Intent::Attack
             } else {
-                Intent::BuffUp
+                Intent::Attack
+                // Intent::BuffUp
             }
         }
         None => Intent::Chill, // We won!
@@ -284,7 +352,7 @@ pub fn green(game_state: &GameState, bot_position: Position) -> Actuators {
         Intent::BuffUp => Actuators {
             move_bot: match buff_target {
                 None => None,
-                Some(Target { pos, .. }) => towards(&bot_position, &pos),
+                Some(Target { path, .. }) => towards(&bot_position, &path[0]), //towards(&bot_position, &pos),
             },
             rotate_chainsaw: chainsaw_rotation,
             rotate_shield: shield_rotation,
@@ -299,8 +367,8 @@ pub fn green(game_state: &GameState, bot_position: Position) -> Actuators {
         },
         _ => Actuators {
             move_bot: None,
-            rotate_chainsaw: chainsaw_rotation,
-            rotate_shield: shield_rotation,
+            rotate_chainsaw: None,
+            rotate_shield: None,
         },
     }
 }
